@@ -75,6 +75,21 @@
       .card, td, th, tbody th, thead th { background: white !important; color: black !important; box-shadow: none; }
       .task { border: none; background: transparent; color: black; resize: none; }
     }
+    .current-cell .task {
+      border-color: var(--accent-2);
+      box-shadow: 0 0 0 3px rgba(142,240,199,.18);
+      background: rgba(142,240,199,.10);
+    }
+
+    .next-cell .task {
+      border-color: #ffcf7a;
+      box-shadow: 0 0 0 3px rgba(255,207,122,.14);
+      background: rgba(255,207,122,.08);
+    }
+
+    .muted {
+      color: var(--muted);
+    }
   </style>
 </head>
 <body>
@@ -104,7 +119,26 @@
         <button class="btn warn" id="resetBtn">Reset</button>
       </div>
     </section>
+    <section class="meta" style="margin-top: 0; margin-bottom: 16px;">
+      <div class="card box">
+        <h3>Now</h3>
+        <p id="liveNowTime">--:--:--</p>
+        <p id="liveToday">--</p>
+      </div>
 
+      <div class="card box">
+        <h3>Current item</h3>
+        <p id="currentItem">Nothing right now</p>
+        <p id="currentRange" class="muted">--</p>
+      </div>
+
+      <div class="card box">
+        <h3>Next item</h3>
+        <p id="nextItem">Nothing upcoming</p>
+        <p id="nextRange" class="muted">--</p>
+        <p id="countdown">--</p>
+      </div>
+    </section>
     <section class="card grid-wrap">
       <table id="scheduleTable">
         <thead>
@@ -185,6 +219,14 @@
     const tbody = document.querySelector("#scheduleTable tbody");
     const weekLabelInput = document.getElementById("weekLabel");
 
+    const liveNowTime = document.getElementById("liveNowTime");
+    const liveToday = document.getElementById("liveToday");
+    const currentItemEl = document.getElementById("currentItem");
+    const currentRangeEl = document.getElementById("currentRange");
+    const nextItemEl = document.getElementById("nextItem");
+    const nextRangeEl = document.getElementById("nextRange");
+    const countdownEl = document.getElementById("countdown");
+
     function getData() {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return structuredClone(defaultData);
@@ -202,6 +244,7 @@
     function render(data) {
       weekLabelInput.value = data.weekLabel || "";
       tbody.innerHTML = "";
+
       for (const time of times) {
         const tr = document.createElement("tr");
         const th = document.createElement("th");
@@ -210,6 +253,9 @@
 
         days.forEach((day, i) => {
           const td = document.createElement("td");
+          td.dataset.time = time;
+          td.dataset.dayIndex = String(i);
+
           const box = document.createElement("div");
           box.className = "cell";
 
@@ -229,8 +275,11 @@
           td.appendChild(box);
           tr.appendChild(td);
         });
+
         tbody.appendChild(tr);
       }
+
+      updateLiveStatus();
     }
 
     function collect() {
@@ -254,12 +303,165 @@
       URL.revokeObjectURL(url);
     }
 
+    function parseTimeRange(range) {
+      const [start, end] = range.split("–").map(s => s.trim());
+      return {
+        startMinutes: toMinutes(start),
+        endMinutes: toMinutes(end),
+        startText: start,
+        endText: end
+      };
+    }
+
+    function toMinutes(hhmm) {
+      const [h, m] = hhmm.split(":").map(Number);
+      return h * 60 + m;
+    }
+
+    function formatTime(date) {
+      return date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      });
+    }
+
+    function formatCountdown(ms) {
+      if (ms <= 0) return "Now";
+      const totalSeconds = Math.floor(ms / 1000);
+      const hrs = Math.floor(totalSeconds / 3600);
+      const mins = Math.floor((totalSeconds % 3600) / 60);
+      const secs = totalSeconds % 60;
+
+      if (hrs > 0) return `Starts in ${hrs}h ${mins}m ${secs}s`;
+      if (mins > 0) return `Starts in ${mins}m ${secs}s`;
+      return `Starts in ${secs}s`;
+    }
+
+    function clearHighlights() {
+      document.querySelectorAll("td.current-cell, td.next-cell").forEach(td => {
+        td.classList.remove("current-cell", "next-cell");
+      });
+    }
+
+    function getDayIndexFromDate(date) {
+      const jsDay = date.getDay(); // Sun=0, Mon=1, ... Sat=6
+      if (jsDay >= 1 && jsDay <= 5) return jsDay - 1;
+      return -1;
+    }
+
+    function findCurrentAndNext(data, now = new Date()) {
+      const dayIndex = getDayIndexFromDate(now);
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const currentSeconds = now.getSeconds();
+
+      if (dayIndex === -1) {
+        return {
+          isWeekday: false,
+          dayIndex,
+          nowBlock: null,
+          nextBlock: null
+        };
+      }
+
+      let nowBlock = null;
+      let nextBlock = null;
+
+      for (const range of times) {
+        const parsed = parseTimeRange(range);
+        const item = (data.cells[range] && data.cells[range][dayIndex]) || "";
+
+        if (currentMinutes >= parsed.startMinutes && currentMinutes < parsed.endMinutes) {
+          nowBlock = {
+            time: range,
+            item,
+            ...parsed
+          };
+        } else if (currentMinutes < parsed.startMinutes && !nextBlock) {
+          nextBlock = {
+            time: range,
+            item,
+            ...parsed
+          };
+        }
+      }
+
+      return {
+        isWeekday: true,
+        dayIndex,
+        currentMinutes,
+        currentSeconds,
+        nowBlock,
+        nextBlock
+      };
+    }
+
+    function updateLiveStatus() {
+      const data = collect();
+      const now = new Date();
+      const dayIndex = getDayIndexFromDate(now);
+      const dayName = dayIndex >= 0 ? days[dayIndex] : now.toLocaleDateString([], { weekday: "long" });
+
+      liveNowTime.textContent = formatTime(now);
+      liveToday.textContent = dayName;
+
+      clearHighlights();
+
+      const status = findCurrentAndNext(data, now);
+
+      if (!status.isWeekday) {
+        currentItemEl.textContent = "Weekend";
+        currentRangeEl.textContent = "No weekday block active";
+        nextItemEl.textContent = "Next block is on Monday";
+        nextRangeEl.textContent = "06:00–08:00";
+        countdownEl.textContent = "Manual recovery mode. Weekend detected.";
+        return;
+      }
+
+      if (status.nowBlock) {
+        currentItemEl.textContent = status.nowBlock.item || "Free / Unnamed block";
+        currentRangeEl.textContent = `${dayName} • ${status.nowBlock.time}`;
+
+        const currentCell = document.querySelector(
+          `td[data-time="${CSS.escape(status.nowBlock.time)}"][data-day-index="${status.dayIndex}"]`
+        );
+        if (currentCell) currentCell.classList.add("current-cell");
+      } else {
+        currentItemEl.textContent = "No active block";
+        currentRangeEl.textContent = `${dayName} • Outside timetable hours`;
+      }
+
+      if (status.nextBlock) {
+        nextItemEl.textContent = status.nextBlock.item || "Free / Unnamed block";
+        nextRangeEl.textContent = `${dayName} • ${status.nextBlock.time}`;
+
+        const nextCell = document.querySelector(
+          `td[data-time="${CSS.escape(status.nextBlock.time)}"][data-day-index="${status.dayIndex}"]`
+        );
+        if (nextCell) nextCell.classList.add("next-cell");
+
+        const nextStart = new Date(now);
+        nextStart.setHours(
+          Math.floor(status.nextBlock.startMinutes / 60),
+          status.nextBlock.startMinutes % 60,
+          0,
+          0
+        );
+        countdownEl.textContent = formatCountdown(nextStart - now);
+      } else {
+        nextItemEl.textContent = "Done for today";
+        nextRangeEl.textContent = `${dayName} • No more blocks`;
+        countdownEl.textContent = "Go rest, menace.";
+      }
+    }
+
     document.getElementById("loadDefault").addEventListener("click", () => {
       render(structuredClone(defaultData));
     });
 
     document.getElementById("saveBtn").addEventListener("click", () => {
       saveData(collect());
+      updateLiveStatus();
       alert("Saved locally.");
     });
 
@@ -283,7 +485,9 @@
       try {
         const text = await file.text();
         const parsed = JSON.parse(text);
-        if (!parsed || typeof parsed !== "object" || !parsed.cells) throw new Error("Invalid format");
+        if (!parsed || typeof parsed !== "object" || !parsed.cells) {
+          throw new Error("Invalid format");
+        }
         saveData(parsed);
         render(parsed);
         alert("Imported.");
@@ -296,9 +500,17 @@
 
     weekLabelInput.addEventListener("input", () => {
       document.title = weekLabelInput.value.trim() || "Weekly Timetable";
+      updateLiveStatus();
+    });
+
+    document.addEventListener("input", (e) => {
+      if (e.target.classList.contains("task")) {
+        updateLiveStatus();
+      }
     });
 
     render(getData());
+    setInterval(updateLiveStatus, 1000);
   </script>
 </body>
 </html>
