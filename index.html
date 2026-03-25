@@ -610,6 +610,22 @@
         });
       }
 
+      const ALARM_SOUND_FILE = "alarm.wav";
+
+      async function ringAlarm() {
+        try {
+          activeAudio = new Audio(ALARM_SOUND_FILE);
+          activeAudio.loop = false;
+          await activeAudio.play();
+        } catch (error) {
+          console.error("Audio failed:", error);
+          alert(
+            `Alarm triggered, but sound could not play.\n\nMake sure "${ALARM_SOUND_FILE}" exists beside alarm.html and click the page once to allow audio.`,
+          );
+        }
+      }
+
+
       function formatCountdown(ms) {
         if (ms <= 0) return "Now";
         const totalSeconds = Math.floor(ms / 1000);
@@ -619,6 +635,9 @@
 
         if (hrs > 0) return `Starts in ${hrs}h ${mins}m ${secs}s`;
         if (mins > 0) return `Starts in ${mins}m ${secs}s`;
+        if (secs == 1){
+          ringAlarm();
+        }
         return `Starts in ${secs}s`;
       }
 
