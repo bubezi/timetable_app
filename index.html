@@ -1,516 +1,818 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Weekly Timetable</title>
-  <style>
-    :root {
-      --bg: #0b1020;
-      --bg-soft: #121932;
-      --panel: #151d39;
-      --panel-2: #1b2549;
-      --border: #2c3a73;
-      --text: #e8ecff;
-      --muted: #9ca9d1;
-      --accent: #7aa2ff;
-      --accent-2: #8ef0c7;
-      --danger: #ff8a8a;
-      --shadow: 0 10px 30px rgba(0,0,0,.3);
-      --radius: 14px;
-    }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; min-height: 100%; background: linear-gradient(180deg, #0a0f1d, #10172e 45%, #0c1326); color: var(--text); font: 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-    button, input, select, textarea { font: inherit; }
-    .wrap { max-width: 1500px; margin: 0 auto; padding: 24px; }
-    .hero { display: flex; justify-content: space-between; gap: 16px; align-items: start; margin-bottom: 20px; }
-    .title h1 { margin: 0 0 8px; font-size: 32px; }
-    .title p { margin: 0; color: var(--muted); max-width: 70ch; }
-    .card { background: rgba(21,29,57,.88); border: 1px solid rgba(122,162,255,.16); backdrop-filter: blur(8px); border-radius: var(--radius); box-shadow: var(--shadow); }
-    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px; margin-bottom: 16px; }
-    .toolbar .group { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-    .spacer { flex: 1; }
-    .btn, .field {
-      border-radius: 10px; border: 1px solid var(--border);
-      background: var(--panel-2); color: var(--text); padding: 10px 12px;
-    }
-    .btn { cursor: pointer; transition: .18s ease; }
-    .btn:hover { transform: translateY(-1px); border-color: var(--accent); }
-    .btn.primary { background: linear-gradient(180deg, #7aa2ff, #5f86df); color: #081022; border: 0; font-weight: 700; }
-    .btn.good { background: linear-gradient(180deg, #8ef0c7, #59c89d); color: #081022; border: 0; font-weight: 700; }
-    .btn.warn { background: linear-gradient(180deg, #ffb38a, #ff9361); color: #211107; border: 0; font-weight: 700; }
-    .field::placeholder { color: #7f8cb7; }
-    .grid-wrap { overflow: auto; border-radius: var(--radius); }
-    table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1080px; }
-    th, td { border-right: 1px solid rgba(122,162,255,.15); border-bottom: 1px solid rgba(122,162,255,.15); vertical-align: top; }
-    th:first-child, td:first-child { border-left: 1px solid rgba(122,162,255,.15); }
-    thead th { position: sticky; top: 0; z-index: 2; background: rgba(14,19,38,.98); }
-    tbody th { position: sticky; left: 0; z-index: 1; background: rgba(14,19,38,.98); text-align: left; }
-    th { padding: 14px 12px; color: var(--text); font-size: 13px; letter-spacing: .03em; text-transform: uppercase; }
-    td { background: rgba(18,25,50,.78); min-width: 185px; }
-    .cell { display: flex; flex-direction: column; gap: 6px; padding: 10px; min-height: 84px; }
-    .task {
-      width: 100%; min-height: 52px; resize: vertical; padding: 10px; border-radius: 10px;
-      border: 1px solid rgba(122,162,255,.18); background: rgba(122,162,255,.08); color: var(--text);
-      outline: none;
-    }
-    .task:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(122,162,255,.18); }
-    .chip { align-self: start; font-size: 11px; color: #081022; background: var(--accent-2); padding: 4px 8px; border-radius: 999px; font-weight: 700; }
-    .meta { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 14px; margin-top: 16px; }
-    .meta .box { padding: 14px; }
-    .meta h3 { margin: 0 0 10px; font-size: 14px; }
-    .meta p, .meta li { color: var(--muted); }
-    .meta ul { margin: 0; padding-left: 18px; }
-    .foot { margin-top: 16px; color: var(--muted); font-size: 13px; }
-    .tag { display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(122,162,255,.22); color: var(--muted); padding: 7px 10px; border-radius: 999px; }
-    .danger { color: var(--danger); }
-    @media (max-width: 900px) {
-      .hero { flex-direction: column; }
-      .meta { grid-template-columns: 1fr; }
-      .title h1 { font-size: 26px; }
-    }
-    @media print {
-      .toolbar, .foot, .meta, .title p { display: none !important; }
-      body { background: white; color: black; }
-      .card, td, th, tbody th, thead th { background: white !important; color: black !important; box-shadow: none; }
-      .task { border: none; background: transparent; color: black; resize: none; }
-    }
-    .current-cell .task {
-      border-color: var(--accent-2);
-      box-shadow: 0 0 0 3px rgba(142,240,199,.18);
-      background: rgba(142,240,199,.10);
-    }
-
-    .next-cell .task {
-      border-color: #ffcf7a;
-      box-shadow: 0 0 0 3px rgba(255,207,122,.14);
-      background: rgba(255,207,122,.08);
-    }
-
-    .muted {
-      color: var(--muted);
-    }
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <section class="hero">
-      <div class="title">
-        <h1>Weekly Timetable</h1>
-        <p>A tiny static planner you can run locally or host on any subdomain. No backend. No login circus. Just your schedule, localStorage, import/export, and print.</p>
-      </div>
-      <div class="tag">Mode: local + hosted</div>
-    </section>
-
-    <section class="card toolbar">
-      <div class="group">
-        <button class="btn primary" id="loadDefault">Load your schedule</button>
-        <button class="btn" id="saveBtn">Save</button>
-        <button class="btn" id="printBtn">Print / PDF</button>
-      </div>
-      <div class="group">
-        <button class="btn good" id="exportBtn">Export JSON</button>
-        <label class="btn" for="importFile">Import JSON</label>
-        <input id="importFile" type="file" accept="application/json" hidden />
-      </div>
-      <div class="spacer"></div>
-      <div class="group">
-        <input class="field" id="weekLabel" placeholder="Week label e.g. Focus Week 1" />
-        <button class="btn warn" id="resetBtn">Reset</button>
-      </div>
-    </section>
-    <section class="meta" style="margin-top: 0; margin-bottom: 16px;">
-      <div class="card box">
-        <h3>Now</h3>
-        <p id="liveNowTime">--:--:--</p>
-        <p id="liveToday">--</p>
-      </div>
-
-      <div class="card box">
-        <h3>Current item</h3>
-        <p id="currentItem">Nothing right now</p>
-        <p id="currentRange" class="muted">--</p>
-      </div>
-
-      <div class="card box">
-        <h3>Next item</h3>
-        <p id="nextItem">Nothing upcoming</p>
-        <p id="nextRange" class="muted">--</p>
-        <p id="countdown">--</p>
-      </div>
-    </section>
-    <section class="card grid-wrap">
-      <table id="scheduleTable">
-        <thead>
-          <tr>
-            <th>Time</th>
-            <th>Monday</th>
-            <th>Tuesday</th>
-            <th>Wednesday</th>
-            <th>Thursday</th>
-            <th>Friday</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <section class="meta">
-      <div class="card box">
-        <h3>How to use</h3>
-        <ul>
-          <li>Edit any cell directly.</li>
-          <li>Click <strong>Save</strong> to keep it in your browser.</li>
-          <li>Use <strong>Export JSON</strong> to back it up or move it to another device.</li>
-          <li>Use <strong>Print / PDF</strong> for a clean printable sheet.</li>
-        </ul>
-      </div>
-      <div class="card box">
-        <h3>Hosting</h3>
-        <ul>
-          <li>Works by double-clicking the HTML file locally.</li>
-          <li>Also works on Nginx, GitHub Pages, Netlify, Cloudflare Pages, or any static subdomain.</li>
-          <li>No database needed unless you later want sync across devices.</li>
-        </ul>
-      </div>
-      <div class="card box">
-        <h3>Reality check</h3>
-        <p>This is intentionally simple. It stays well under your 2-page / 2000-line limit. Fancy syncing, accounts, reminders, and analytics are where complexity grows teeth.</p>
-      </div>
-    </section>
-
-    <div class="foot">Saved locally in your browser. Clear site data and it forgets everything — like a goldfish with developer privileges.</div>
-  </div>
-
-  <script>
-    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-    const times = [
-      "06:00–08:00",
-      "08:00–09:00",
-      "09:00–12:00",
-      "12:00–13:00",
-      "13:00–15:00",
-      "15:00–16:00",
-      "16:00–16:30",
-      "16:30–18:00",
-      "18:00–20:00",
-      "20:00–21:30",
-      "21:30–22:00"
-    ];
-
-    const defaultData = {
-      weekLabel: "Bubezi Weekly Timetable",
-      cells: {
-        "06:00–08:00": ["Reading", "Reading", "Reading", "Reading", "Reading"],
-        "08:00–09:00": ["Exercise", "Exercise", "Exercise", "Exercise", "Exercise"],
-        "09:00–12:00": ["Client Work", "Client Work", "Client Work", "Client Work", "Client Work"],
-        "12:00–13:00": ["Lunch / Walk", "Lunch / Walk", "Lunch / Walk", "Lunch / Walk", "Lunch / Walk"],
-        "13:00–15:00": ["Coding / Tools", "Coding / Tools", "Coding / Tools", "Coding / Tools", "Coding / Tools"],
-        "15:00–16:00": ["Chores", "Chores", "Chores", "Chores", "Chores"],
-        "16:00–16:30": ["Relax", "Relax", "Relax", "Relax", "Relax"],
-        "16:30–18:00": ["Trading", "Deep Market Research", "Trading", "Deep Market Research", "Trading"],
-        "18:00–20:00": ["Client Work", "Client Work", "Relax / Movie", "Relax / Movie", "Relax / Movie"],
-        "20:00–21:30": ["Light Reading / Curiosity", "Light Reading", "Light Reading", "Light Reading", "Light Reading"],
-        "21:30–22:00": ["Wind Down", "Wind Down", "Wind Down", "Wind Down", "Wind Down"]
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Weekly Timetable</title>
+    <link rel="icon" href="favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" href="favicon-32x32.png" />
+    <style>
+      :root {
+        --bg: #0b1020;
+        --bg-soft: #121932;
+        --panel: #151d39;
+        --panel-2: #1b2549;
+        --border: #2c3a73;
+        --text: #e8ecff;
+        --muted: #9ca9d1;
+        --accent: #7aa2ff;
+        --accent-2: #8ef0c7;
+        --danger: #ff8a8a;
+        --shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        --radius: 14px;
       }
-    };
-
-    const STORAGE_KEY = "bubezi-weekly-timetable-v1";
-    const tbody = document.querySelector("#scheduleTable tbody");
-    const weekLabelInput = document.getElementById("weekLabel");
-
-    const liveNowTime = document.getElementById("liveNowTime");
-    const liveToday = document.getElementById("liveToday");
-    const currentItemEl = document.getElementById("currentItem");
-    const currentRangeEl = document.getElementById("currentRange");
-    const nextItemEl = document.getElementById("nextItem");
-    const nextRangeEl = document.getElementById("nextRange");
-    const countdownEl = document.getElementById("countdown");
-
-    function getData() {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return structuredClone(defaultData);
-      try {
-        return JSON.parse(raw);
-      } catch {
-        return structuredClone(defaultData);
+      * {
+        box-sizing: border-box;
       }
-    }
-
-    function saveData(data) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data, null, 2));
-    }
-
-    function render(data) {
-      weekLabelInput.value = data.weekLabel || "";
-      tbody.innerHTML = "";
-
-      for (const time of times) {
-        const tr = document.createElement("tr");
-        const th = document.createElement("th");
-        th.textContent = time;
-        tr.appendChild(th);
-
-        days.forEach((day, i) => {
-          const td = document.createElement("td");
-          td.dataset.time = time;
-          td.dataset.dayIndex = String(i);
-
-          const box = document.createElement("div");
-          box.className = "cell";
-
-          const chip = document.createElement("div");
-          chip.className = "chip";
-          chip.textContent = day;
-
-          const area = document.createElement("textarea");
-          area.className = "task";
-          area.value = (data.cells[time] && data.cells[time][i]) || "";
-          area.dataset.time = time;
-          area.dataset.dayIndex = String(i);
-          area.placeholder = `${day} @ ${time}`;
-
-          box.appendChild(chip);
-          box.appendChild(area);
-          td.appendChild(box);
-          tr.appendChild(td);
-        });
-
-        tbody.appendChild(tr);
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: linear-gradient(180deg, #0a0f1d, #10172e 45%, #0c1326);
+        color: var(--text);
+        font:
+          14px/1.45 Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Arial,
+          sans-serif;
+      }
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+      .wrap {
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      .hero {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: start;
+        margin-bottom: 20px;
+      }
+      .title h1 {
+        margin: 0 0 8px;
+        font-size: 32px;
+      }
+      .title p {
+        margin: 0;
+        color: var(--muted);
+        max-width: 70ch;
+      }
+      .card {
+        background: rgba(21, 29, 57, 0.88);
+        border: 1px solid rgba(122, 162, 255, 0.16);
+        backdrop-filter: blur(8px);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+      }
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 14px;
+        margin-bottom: 16px;
+      }
+      .toolbar .group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+      .spacer {
+        flex: 1;
+      }
+      .btn,
+      .field {
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--panel-2);
+        color: var(--text);
+        padding: 10px 12px;
+      }
+      .btn {
+        cursor: pointer;
+        transition: 0.18s ease;
+      }
+      .btn:hover {
+        transform: translateY(-1px);
+        border-color: var(--accent);
+      }
+      .btn.primary {
+        background: linear-gradient(180deg, #7aa2ff, #5f86df);
+        color: #081022;
+        border: 0;
+        font-weight: 700;
+      }
+      .btn.good {
+        background: linear-gradient(180deg, #8ef0c7, #59c89d);
+        color: #081022;
+        border: 0;
+        font-weight: 700;
+      }
+      .btn.warn {
+        background: linear-gradient(180deg, #ffb38a, #ff9361);
+        color: #211107;
+        border: 0;
+        font-weight: 700;
+      }
+      .field::placeholder {
+        color: #7f8cb7;
+      }
+      .grid-wrap {
+        overflow: auto;
+        border-radius: var(--radius);
+      }
+      table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        min-width: 1080px;
+      }
+      th,
+      td {
+        border-right: 1px solid rgba(122, 162, 255, 0.15);
+        border-bottom: 1px solid rgba(122, 162, 255, 0.15);
+        vertical-align: top;
+      }
+      th:first-child,
+      td:first-child {
+        border-left: 1px solid rgba(122, 162, 255, 0.15);
+      }
+      thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: rgba(14, 19, 38, 0.98);
+      }
+      tbody th {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        background: rgba(14, 19, 38, 0.98);
+        text-align: left;
+      }
+      th {
+        padding: 14px 12px;
+        color: var(--text);
+        font-size: 13px;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+      }
+      td {
+        background: rgba(18, 25, 50, 0.78);
+        min-width: 185px;
+      }
+      .cell {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 10px;
+        min-height: 84px;
+      }
+      .task {
+        width: 100%;
+        min-height: 52px;
+        resize: vertical;
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(122, 162, 255, 0.18);
+        background: rgba(122, 162, 255, 0.08);
+        color: var(--text);
+        outline: none;
+      }
+      .task:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(122, 162, 255, 0.18);
+      }
+      .chip {
+        align-self: start;
+        font-size: 11px;
+        color: #081022;
+        background: var(--accent-2);
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-weight: 700;
+      }
+      .meta {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(220px, 1fr));
+        gap: 14px;
+        margin-top: 16px;
+      }
+      .meta .box {
+        padding: 14px;
+      }
+      .meta h3 {
+        margin: 0 0 10px;
+        font-size: 14px;
+      }
+      .meta p,
+      .meta li {
+        color: var(--muted);
+      }
+      .meta ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+      .foot {
+        margin-top: 16px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid rgba(122, 162, 255, 0.22);
+        color: var(--muted);
+        padding: 7px 10px;
+        border-radius: 999px;
+      }
+      .danger {
+        color: var(--danger);
+      }
+      @media (max-width: 900px) {
+        .hero {
+          flex-direction: column;
+        }
+        .meta {
+          grid-template-columns: 1fr;
+        }
+        .title h1 {
+          font-size: 26px;
+        }
+      }
+      @media print {
+        .toolbar,
+        .foot,
+        .meta,
+        .title p {
+          display: none !important;
+        }
+        body {
+          background: white;
+          color: black;
+        }
+        .card,
+        td,
+        th,
+        tbody th,
+        thead th {
+          background: white !important;
+          color: black !important;
+          box-shadow: none;
+        }
+        .task {
+          border: none;
+          background: transparent;
+          color: black;
+          resize: none;
+        }
+      }
+      .current-cell .task {
+        border-color: var(--accent-2);
+        box-shadow: 0 0 0 3px rgba(142, 240, 199, 0.18);
+        background: rgba(142, 240, 199, 0.1);
       }
 
-      updateLiveStatus();
-    }
+      .next-cell .task {
+        border-color: #ffcf7a;
+        box-shadow: 0 0 0 3px rgba(255, 207, 122, 0.14);
+        background: rgba(255, 207, 122, 0.08);
+      }
 
-    function collect() {
-      const data = { weekLabel: weekLabelInput.value.trim(), cells: {} };
-      times.forEach(time => data.cells[time] = ["", "", "", "", ""]);
-      document.querySelectorAll(".task").forEach(el => {
-        const time = el.dataset.time;
-        const i = Number(el.dataset.dayIndex);
-        data.cells[time][i] = el.value.trim();
-      });
-      return data;
-    }
+      .muted {
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <section class="hero">
+        <div class="title">
+          <h1>Weekly Timetable</h1>
+          <p>
+            A tiny static planner you can run locally or host on any subdomain.
+            No backend. No login circus. Just your schedule, localStorage,
+            import/export, and print.
+          </p>
+        </div>
+        <div class="tag">Mode: local + hosted</div>
+      </section>
 
-    function download(filename, content, type) {
-      const blob = new Blob([content], { type });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
+      <section class="card toolbar">
+        <div class="group">
+          <button class="btn primary" id="loadDefault">
+            Load your schedule
+          </button>
+          <button class="btn" id="saveBtn">Save</button>
+          <button class="btn" id="printBtn">Print / PDF</button>
+        </div>
+        <div class="group">
+          <button class="btn good" id="exportBtn">Export JSON</button>
+          <label class="btn" for="importFile">Import JSON</label>
+          <input id="importFile" type="file" accept="application/json" hidden />
+        </div>
+        <div class="spacer"></div>
+        <div class="group">
+          <input
+            class="field"
+            id="weekLabel"
+            placeholder="Week label e.g. Focus Week 1"
+          />
+          <button class="btn warn" id="resetBtn">Reset</button>
+        </div>
+      </section>
+      <section class="meta" style="margin-top: 0; margin-bottom: 16px">
+        <div class="card box">
+          <h3>Now</h3>
+          <p id="liveNowTime">--:--:--</p>
+          <p id="liveToday">--</p>
+        </div>
 
-    function parseTimeRange(range) {
-      const [start, end] = range.split("–").map(s => s.trim());
-      return {
-        startMinutes: toMinutes(start),
-        endMinutes: toMinutes(end),
-        startText: start,
-        endText: end
+        <div class="card box">
+          <h3>Current item</h3>
+          <p id="currentItem">Nothing right now</p>
+          <p id="currentRange" class="muted">--</p>
+        </div>
+
+        <div class="card box">
+          <h3>Next item</h3>
+          <p id="nextItem">Nothing upcoming</p>
+          <p id="nextRange" class="muted">--</p>
+          <p id="countdown">--</p>
+        </div>
+      </section>
+      <section class="card grid-wrap">
+        <table id="scheduleTable">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Monday</th>
+              <th>Tuesday</th>
+              <th>Wednesday</th>
+              <th>Thursday</th>
+              <th>Friday</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section class="meta">
+        <div class="card box">
+          <h3>How to use</h3>
+          <ul>
+            <li>Edit any cell directly.</li>
+            <li>Click <strong>Save</strong> to keep it in your browser.</li>
+            <li>
+              Use <strong>Export JSON</strong> to back it up or move it to
+              another device.
+            </li>
+            <li>
+              Use <strong>Print / PDF</strong> for a clean printable sheet.
+            </li>
+          </ul>
+        </div>
+        <div class="card box">
+          <h3>Hosting</h3>
+          <ul>
+            <li>Works by double-clicking the HTML file locally.</li>
+            <li>
+              Also works on Nginx, GitHub Pages, Netlify, Cloudflare Pages, or
+              any static subdomain.
+            </li>
+            <li>
+              No database needed unless you later want sync across devices.
+            </li>
+          </ul>
+        </div>
+        <div class="card box">
+          <h3>Reality check</h3>
+          <p>
+            This is intentionally simple. It stays well under your 2-page /
+            2000-line limit. Fancy syncing, accounts, reminders, and analytics
+            are where complexity grows teeth.
+          </p>
+        </div>
+      </section>
+
+      <div class="foot">
+        Saved locally in your browser. Clear site data and it forgets everything
+        — like a goldfish with developer privileges.
+      </div>
+    </div>
+
+    <script>
+      const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+      const times = [
+        "06:00–08:00",
+        "08:00–09:00",
+        "09:00–12:00",
+        "12:00–13:00",
+        "13:00–15:00",
+        "15:00–16:00",
+        "16:00–16:30",
+        "16:30–18:00",
+        "18:00–20:00",
+        "20:00–21:30",
+        "21:30–22:00",
+      ];
+
+      const defaultData = {
+        weekLabel: "Bubezi Weekly Timetable",
+        cells: {
+          "06:00–08:00": [
+            "Reading",
+            "Reading",
+            "Reading",
+            "Reading",
+            "Reading",
+          ],
+          "08:00–09:00": [
+            "Exercise",
+            "Exercise",
+            "Exercise",
+            "Exercise",
+            "Exercise",
+          ],
+          "09:00–12:00": [
+            "Client Work",
+            "Client Work",
+            "Client Work",
+            "Client Work",
+            "Client Work",
+          ],
+          "12:00–13:00": [
+            "Lunch / Walk",
+            "Lunch / Walk",
+            "Lunch / Walk",
+            "Lunch / Walk",
+            "Lunch / Walk",
+          ],
+          "13:00–15:00": [
+            "Coding / Tools",
+            "Coding / Tools",
+            "Coding / Tools",
+            "Coding / Tools",
+            "Coding / Tools",
+          ],
+          "15:00–16:00": ["Chores", "Chores", "Chores", "Chores", "Chores"],
+          "16:00–16:30": ["Relax", "Relax", "Relax", "Relax", "Relax"],
+          "16:30–18:00": [
+            "Trading",
+            "Deep Market Research",
+            "Trading",
+            "Deep Market Research",
+            "Trading",
+          ],
+          "18:00–20:00": [
+            "Client Work",
+            "Client Work",
+            "Relax / Movie",
+            "Relax / Movie",
+            "Relax / Movie",
+          ],
+          "20:00–21:30": [
+            "Light Reading / Curiosity",
+            "Light Reading",
+            "Light Reading",
+            "Light Reading",
+            "Light Reading",
+          ],
+          "21:30–22:00": [
+            "Wind Down",
+            "Wind Down",
+            "Wind Down",
+            "Wind Down",
+            "Wind Down",
+          ],
+        },
       };
-    }
 
-    function toMinutes(hhmm) {
-      const [h, m] = hhmm.split(":").map(Number);
-      return h * 60 + m;
-    }
+      const STORAGE_KEY = "bubezi-weekly-timetable-v1";
+      const tbody = document.querySelector("#scheduleTable tbody");
+      const weekLabelInput = document.getElementById("weekLabel");
 
-    function formatTime(date) {
-      return date.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit"
-      });
-    }
+      const liveNowTime = document.getElementById("liveNowTime");
+      const liveToday = document.getElementById("liveToday");
+      const currentItemEl = document.getElementById("currentItem");
+      const currentRangeEl = document.getElementById("currentRange");
+      const nextItemEl = document.getElementById("nextItem");
+      const nextRangeEl = document.getElementById("nextRange");
+      const countdownEl = document.getElementById("countdown");
 
-    function formatCountdown(ms) {
-      if (ms <= 0) return "Now";
-      const totalSeconds = Math.floor(ms / 1000);
-      const hrs = Math.floor(totalSeconds / 3600);
-      const mins = Math.floor((totalSeconds % 3600) / 60);
-      const secs = totalSeconds % 60;
+      function getData() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return structuredClone(defaultData);
+        try {
+          return JSON.parse(raw);
+        } catch {
+          return structuredClone(defaultData);
+        }
+      }
 
-      if (hrs > 0) return `Starts in ${hrs}h ${mins}m ${secs}s`;
-      if (mins > 0) return `Starts in ${mins}m ${secs}s`;
-      return `Starts in ${secs}s`;
-    }
+      function saveData(data) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data, null, 2));
+      }
 
-    function clearHighlights() {
-      document.querySelectorAll("td.current-cell, td.next-cell").forEach(td => {
-        td.classList.remove("current-cell", "next-cell");
-      });
-    }
+      function render(data) {
+        weekLabelInput.value = data.weekLabel || "";
+        tbody.innerHTML = "";
 
-    function getDayIndexFromDate(date) {
-      const jsDay = date.getDay(); // Sun=0, Mon=1, ... Sat=6
-      if (jsDay >= 1 && jsDay <= 5) return jsDay - 1;
-      return -1;
-    }
+        for (const time of times) {
+          const tr = document.createElement("tr");
+          const th = document.createElement("th");
+          th.textContent = time;
+          tr.appendChild(th);
 
-    function findCurrentAndNext(data, now = new Date()) {
-      const dayIndex = getDayIndexFromDate(now);
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
-      const currentSeconds = now.getSeconds();
+          days.forEach((day, i) => {
+            const td = document.createElement("td");
+            td.dataset.time = time;
+            td.dataset.dayIndex = String(i);
 
-      if (dayIndex === -1) {
+            const box = document.createElement("div");
+            box.className = "cell";
+
+            const chip = document.createElement("div");
+            chip.className = "chip";
+            chip.textContent = day;
+
+            const area = document.createElement("textarea");
+            area.className = "task";
+            area.value = (data.cells[time] && data.cells[time][i]) || "";
+            area.dataset.time = time;
+            area.dataset.dayIndex = String(i);
+            area.placeholder = `${day} @ ${time}`;
+
+            box.appendChild(chip);
+            box.appendChild(area);
+            td.appendChild(box);
+            tr.appendChild(td);
+          });
+
+          tbody.appendChild(tr);
+        }
+
+        updateLiveStatus();
+      }
+
+      function collect() {
+        const data = { weekLabel: weekLabelInput.value.trim(), cells: {} };
+        times.forEach((time) => (data.cells[time] = ["", "", "", "", ""]));
+        document.querySelectorAll(".task").forEach((el) => {
+          const time = el.dataset.time;
+          const i = Number(el.dataset.dayIndex);
+          data.cells[time][i] = el.value.trim();
+        });
+        return data;
+      }
+
+      function download(filename, content, type) {
+        const blob = new Blob([content], { type });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      function parseTimeRange(range) {
+        const [start, end] = range.split("–").map((s) => s.trim());
         return {
-          isWeekday: false,
-          dayIndex,
-          nowBlock: null,
-          nextBlock: null
+          startMinutes: toMinutes(start),
+          endMinutes: toMinutes(end),
+          startText: start,
+          endText: end,
         };
       }
 
-      let nowBlock = null;
-      let nextBlock = null;
+      function toMinutes(hhmm) {
+        const [h, m] = hhmm.split(":").map(Number);
+        return h * 60 + m;
+      }
 
-      for (const range of times) {
-        const parsed = parseTimeRange(range);
-        const item = (data.cells[range] && data.cells[range][dayIndex]) || "";
+      function formatTime(date) {
+        return date.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+      }
 
-        if (currentMinutes >= parsed.startMinutes && currentMinutes < parsed.endMinutes) {
-          nowBlock = {
-            time: range,
-            item,
-            ...parsed
+      function formatCountdown(ms) {
+        if (ms <= 0) return "Now";
+        const totalSeconds = Math.floor(ms / 1000);
+        const hrs = Math.floor(totalSeconds / 3600);
+        const mins = Math.floor((totalSeconds % 3600) / 60);
+        const secs = totalSeconds % 60;
+
+        if (hrs > 0) return `Starts in ${hrs}h ${mins}m ${secs}s`;
+        if (mins > 0) return `Starts in ${mins}m ${secs}s`;
+        return `Starts in ${secs}s`;
+      }
+
+      function clearHighlights() {
+        document
+          .querySelectorAll("td.current-cell, td.next-cell")
+          .forEach((td) => {
+            td.classList.remove("current-cell", "next-cell");
+          });
+      }
+
+      function getDayIndexFromDate(date) {
+        const jsDay = date.getDay(); // Sun=0, Mon=1, ... Sat=6
+        if (jsDay >= 1 && jsDay <= 5) return jsDay - 1;
+        return -1;
+      }
+
+      function findCurrentAndNext(data, now = new Date()) {
+        const dayIndex = getDayIndexFromDate(now);
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const currentSeconds = now.getSeconds();
+
+        if (dayIndex === -1) {
+          return {
+            isWeekday: false,
+            dayIndex,
+            nowBlock: null,
+            nextBlock: null,
           };
-        } else if (currentMinutes < parsed.startMinutes && !nextBlock) {
-          nextBlock = {
-            time: range,
-            item,
-            ...parsed
-          };
+        }
+
+        let nowBlock = null;
+        let nextBlock = null;
+
+        for (const range of times) {
+          const parsed = parseTimeRange(range);
+          const item = (data.cells[range] && data.cells[range][dayIndex]) || "";
+
+          if (
+            currentMinutes >= parsed.startMinutes &&
+            currentMinutes < parsed.endMinutes
+          ) {
+            nowBlock = {
+              time: range,
+              item,
+              ...parsed,
+            };
+          } else if (currentMinutes < parsed.startMinutes && !nextBlock) {
+            nextBlock = {
+              time: range,
+              item,
+              ...parsed,
+            };
+          }
+        }
+
+        return {
+          isWeekday: true,
+          dayIndex,
+          currentMinutes,
+          currentSeconds,
+          nowBlock,
+          nextBlock,
+        };
+      }
+
+      function updateLiveStatus() {
+        const data = collect();
+        const now = new Date();
+        const dayIndex = getDayIndexFromDate(now);
+        const dayName =
+          dayIndex >= 0
+            ? days[dayIndex]
+            : now.toLocaleDateString([], { weekday: "long" });
+
+        liveNowTime.textContent = formatTime(now);
+        liveToday.textContent = dayName;
+
+        clearHighlights();
+
+        const status = findCurrentAndNext(data, now);
+
+        if (!status.isWeekday) {
+          currentItemEl.textContent = "Weekend";
+          currentRangeEl.textContent = "No weekday block active";
+          nextItemEl.textContent = "Next block is on Monday";
+          nextRangeEl.textContent = "06:00–08:00";
+          countdownEl.textContent = "Manual recovery mode. Weekend detected.";
+          return;
+        }
+
+        if (status.nowBlock) {
+          currentItemEl.textContent =
+            status.nowBlock.item || "Free / Unnamed block";
+          currentRangeEl.textContent = `${dayName} • ${status.nowBlock.time}`;
+
+          const currentCell = document.querySelector(
+            `td[data-time="${CSS.escape(status.nowBlock.time)}"][data-day-index="${status.dayIndex}"]`,
+          );
+          if (currentCell) currentCell.classList.add("current-cell");
+        } else {
+          currentItemEl.textContent = "No active block";
+          currentRangeEl.textContent = `${dayName} • Outside timetable hours`;
+        }
+
+        if (status.nextBlock) {
+          nextItemEl.textContent =
+            status.nextBlock.item || "Free / Unnamed block";
+          nextRangeEl.textContent = `${dayName} • ${status.nextBlock.time}`;
+
+          const nextCell = document.querySelector(
+            `td[data-time="${CSS.escape(status.nextBlock.time)}"][data-day-index="${status.dayIndex}"]`,
+          );
+          if (nextCell) nextCell.classList.add("next-cell");
+
+          const nextStart = new Date(now);
+          nextStart.setHours(
+            Math.floor(status.nextBlock.startMinutes / 60),
+            status.nextBlock.startMinutes % 60,
+            0,
+            0,
+          );
+          countdownEl.textContent = formatCountdown(nextStart - now);
+        } else {
+          nextItemEl.textContent = "Done for today";
+          nextRangeEl.textContent = `${dayName} • No more blocks`;
+          countdownEl.textContent = "Go rest, menace.";
         }
       }
 
-      return {
-        isWeekday: true,
-        dayIndex,
-        currentMinutes,
-        currentSeconds,
-        nowBlock,
-        nextBlock
-      };
-    }
+      document.getElementById("loadDefault").addEventListener("click", () => {
+        render(structuredClone(defaultData));
+      });
 
-    function updateLiveStatus() {
-      const data = collect();
-      const now = new Date();
-      const dayIndex = getDayIndexFromDate(now);
-      const dayName = dayIndex >= 0 ? days[dayIndex] : now.toLocaleDateString([], { weekday: "long" });
-
-      liveNowTime.textContent = formatTime(now);
-      liveToday.textContent = dayName;
-
-      clearHighlights();
-
-      const status = findCurrentAndNext(data, now);
-
-      if (!status.isWeekday) {
-        currentItemEl.textContent = "Weekend";
-        currentRangeEl.textContent = "No weekday block active";
-        nextItemEl.textContent = "Next block is on Monday";
-        nextRangeEl.textContent = "06:00–08:00";
-        countdownEl.textContent = "Manual recovery mode. Weekend detected.";
-        return;
-      }
-
-      if (status.nowBlock) {
-        currentItemEl.textContent = status.nowBlock.item || "Free / Unnamed block";
-        currentRangeEl.textContent = `${dayName} • ${status.nowBlock.time}`;
-
-        const currentCell = document.querySelector(
-          `td[data-time="${CSS.escape(status.nowBlock.time)}"][data-day-index="${status.dayIndex}"]`
-        );
-        if (currentCell) currentCell.classList.add("current-cell");
-      } else {
-        currentItemEl.textContent = "No active block";
-        currentRangeEl.textContent = `${dayName} • Outside timetable hours`;
-      }
-
-      if (status.nextBlock) {
-        nextItemEl.textContent = status.nextBlock.item || "Free / Unnamed block";
-        nextRangeEl.textContent = `${dayName} • ${status.nextBlock.time}`;
-
-        const nextCell = document.querySelector(
-          `td[data-time="${CSS.escape(status.nextBlock.time)}"][data-day-index="${status.dayIndex}"]`
-        );
-        if (nextCell) nextCell.classList.add("next-cell");
-
-        const nextStart = new Date(now);
-        nextStart.setHours(
-          Math.floor(status.nextBlock.startMinutes / 60),
-          status.nextBlock.startMinutes % 60,
-          0,
-          0
-        );
-        countdownEl.textContent = formatCountdown(nextStart - now);
-      } else {
-        nextItemEl.textContent = "Done for today";
-        nextRangeEl.textContent = `${dayName} • No more blocks`;
-        countdownEl.textContent = "Go rest, menace.";
-      }
-    }
-
-    document.getElementById("loadDefault").addEventListener("click", () => {
-      render(structuredClone(defaultData));
-    });
-
-    document.getElementById("saveBtn").addEventListener("click", () => {
-      saveData(collect());
-      updateLiveStatus();
-      alert("Saved locally.");
-    });
-
-    document.getElementById("resetBtn").addEventListener("click", () => {
-      if (!confirm("Reset timetable to your default schedule?")) return;
-      const fresh = structuredClone(defaultData);
-      saveData(fresh);
-      render(fresh);
-    });
-
-    document.getElementById("printBtn").addEventListener("click", () => window.print());
-
-    document.getElementById("exportBtn").addEventListener("click", () => {
-      const data = collect();
-      download("weekly-timetable.json", JSON.stringify(data, null, 2), "application/json");
-    });
-
-    document.getElementById("importFile").addEventListener("change", async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      try {
-        const text = await file.text();
-        const parsed = JSON.parse(text);
-        if (!parsed || typeof parsed !== "object" || !parsed.cells) {
-          throw new Error("Invalid format");
-        }
-        saveData(parsed);
-        render(parsed);
-        alert("Imported.");
-      } catch (err) {
-        alert("Could not import that JSON file.");
-      } finally {
-        e.target.value = "";
-      }
-    });
-
-    weekLabelInput.addEventListener("input", () => {
-      document.title = weekLabelInput.value.trim() || "Weekly Timetable";
-      updateLiveStatus();
-    });
-
-    document.addEventListener("input", (e) => {
-      if (e.target.classList.contains("task")) {
+      document.getElementById("saveBtn").addEventListener("click", () => {
+        saveData(collect());
         updateLiveStatus();
-      }
-    });
+        alert("Saved locally.");
+      });
 
-    render(getData());
-    setInterval(updateLiveStatus, 1000);
-  </script>
-</body>
+      document.getElementById("resetBtn").addEventListener("click", () => {
+        if (!confirm("Reset timetable to your default schedule?")) return;
+        const fresh = structuredClone(defaultData);
+        saveData(fresh);
+        render(fresh);
+      });
+
+      document
+        .getElementById("printBtn")
+        .addEventListener("click", () => window.print());
+
+      document.getElementById("exportBtn").addEventListener("click", () => {
+        const data = collect();
+        download(
+          "weekly-timetable.json",
+          JSON.stringify(data, null, 2),
+          "application/json",
+        );
+      });
+
+      document
+        .getElementById("importFile")
+        .addEventListener("change", async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          try {
+            const text = await file.text();
+            const parsed = JSON.parse(text);
+            if (!parsed || typeof parsed !== "object" || !parsed.cells) {
+              throw new Error("Invalid format");
+            }
+            saveData(parsed);
+            render(parsed);
+            alert("Imported.");
+          } catch (err) {
+            alert("Could not import that JSON file.");
+          } finally {
+            e.target.value = "";
+          }
+        });
+
+      weekLabelInput.addEventListener("input", () => {
+        document.title = weekLabelInput.value.trim() || "Weekly Timetable";
+        updateLiveStatus();
+      });
+
+      document.addEventListener("input", (e) => {
+        if (e.target.classList.contains("task")) {
+          updateLiveStatus();
+        }
+      });
+
+      render(getData());
+      setInterval(updateLiveStatus, 1000);
+    </script>
+  </body>
 </html>
