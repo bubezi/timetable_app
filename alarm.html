@@ -314,9 +314,49 @@
           padding: 16px;
         }
       }
+
+      /* Site nav */
+      .site-nav {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        flex-wrap: wrap;
+        padding: 12px 16px;
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .site-nav a {
+        color: #9aa4c7;
+        text-decoration: none;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        padding: 8px 12px;
+        border-radius: 999px;
+        transition: 0.2s ease;
+      }
+      .site-nav a:hover {
+        color: #eef2ff;
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .site-nav a.active {
+        color: #0b1020;
+        background: linear-gradient(135deg, #7c9cff, #9a7cff);
+        font-weight: 700;
+      }
     </style>
   </head>
   <body>
+    <nav class="site-nav" id="siteNav">
+      <a href="/index.html">Timetable</a>
+      <a href="/alarm.html">Alarm</a>
+      <a href="/clock/clock.html">Clock</a>
+    </nav>
     <div class="app">
       <section class="hero">
         <div class="label">Alarm Clock</div>
@@ -612,6 +652,21 @@
 
       setInterval(formatNow, 1000);
       setInterval(checkAlarms, 1000);
+    </script>
+    <script>
+      (function () {
+        const path = window.location.pathname.replace(/\/+$/, "") || "/";
+        document.querySelectorAll("#siteNav a").forEach((a) => {
+          const href = a.getAttribute("href").replace(/\/+$/, "");
+          if (
+            path === href ||
+            (href === "" && path === "/index.html") ||
+            path.endsWith(href)
+          ) {
+            a.classList.add("active");
+          }
+        });
+      })();
     </script>
   </body>
 </html>
