@@ -317,18 +317,29 @@
 
       /* Site nav */
       .site-nav {
-        position: sticky;
-        top: 0;
-        z-index: 100;
+        position: fixed;
+        top: -70px; /* hidden above the viewport */
+        left: 0;
+        width: 100%;
+        z-index: 1000;
+
         display: flex;
         gap: 8px;
         justify-content: center;
         flex-wrap: wrap;
         padding: 12px 16px;
+
         background: rgba(15, 23, 42, 0.75);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
+
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+        transition:
+          top 0.25s ease,
+          opacity 0.25s ease;
+
+        opacity: 0;
       }
       .site-nav a {
         color: #9aa4c7;
@@ -356,6 +367,7 @@
       <a href="/index.html">Timetable</a>
       <a href="/alarm.html">Alarm</a>
       <a href="/clock/clock.html">Clock</a>
+      <a href="/gold-calculator.html">Gold Calc</a>
     </nav>
     <div class="app">
       <section class="hero">
@@ -667,6 +679,41 @@
           }
         });
       })();
+      const nav = document.getElementById("siteNav");
+
+      let hideTimer = null;
+
+      function showNav() {
+        nav.style.top = "0";
+        nav.style.opacity = "1";
+
+        clearTimeout(hideTimer);
+      }
+
+      function hideNav() {
+        hideTimer = setTimeout(() => {
+          nav.style.top = "-70px";
+          nav.style.opacity = "0";
+        }, 300);
+      }
+
+      // Show when mouse is near the top of the window
+      document.addEventListener("mousemove", (e) => {
+        if (e.clientY < 20) {
+          showNav();
+        }
+      });
+
+      // Keep it visible while hovering it
+      nav.addEventListener("mouseenter", () => {
+        clearTimeout(hideTimer);
+      });
+
+      // Hide after leaving
+      nav.addEventListener("mouseleave", hideNav);
+
+      // Hide initially
+      hideNav();
     </script>
   </body>
 </html>
