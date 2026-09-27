@@ -402,9 +402,51 @@
         background: linear-gradient(135deg, #7c9cff, #9a7cff);
         font-weight: 700;
       }
+
+      /* Tap handle so touch devices (no hover) can open the nav */
+      .nav-handle {
+        position: fixed;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1001;
+        width: 72px;
+        height: 26px;
+        padding-top: 6px;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-top: none;
+        border-radius: 0 0 14px 14px;
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+      .nav-handle::before {
+        content: "";
+        width: 32px;
+        height: 4px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.35);
+      }
+      @media (hover: hover) and (pointer: fine) {
+        .nav-handle {
+          display: none;
+        }
+      }
     </style>
   </head>
   <body>
+    <div
+      class="nav-handle"
+      id="navHandle"
+      role="button"
+      tabindex="0"
+      aria-label="Toggle navigation"
+    ></div>
     <nav class="site-nav" id="siteNav">
       <a href="/index.html">Timetable</a>
       <a href="/alarm.html">Alarm</a>
@@ -905,7 +947,9 @@
       })();
 
       const nav = document.getElementById("siteNav");
+      const navHandle = document.getElementById("navHandle");
       let hideTimer = null;
+      let navPinned = false;
 
       function showNav() {
         nav.style.top = "0";
@@ -914,6 +958,7 @@
       }
 
       function hideNav() {
+        if (navPinned) return;
         hideTimer = setTimeout(() => {
           nav.style.top = "-70px";
           nav.style.opacity = "0";
@@ -927,7 +972,38 @@
       nav.addEventListener("mouseenter", () => clearTimeout(hideTimer));
       nav.addEventListener("mouseleave", hideNav);
 
+      // Touch devices: tap the handle to pin the nav open or closed
+      if (navHandle) {
+        navHandle.addEventListener("click", (e) => {
+          e.stopPropagation();
+          navPinned = !navPinned;
+          if (navPinned) {
+            showNav();
+          } else {
+            clearTimeout(hideTimer);
+            nav.style.top = "-70px";
+            nav.style.opacity = "0";
+          }
+        });
+        navHandle.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            navHandle.click();
+          }
+        });
+      }
+
+      // Tapping elsewhere closes a pinned-open nav
+      document.addEventListener("click", (e) => {
+        if (!navPinned) return;
+        if (nav.contains(e.target) || e.target === navHandle) return;
+        navPinned = false;
+        nav.style.top = "-70px";
+        nav.style.opacity = "0";
+      });
+
       hideNav();
     </script>
   </body>
 </html>
+

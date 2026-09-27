@@ -42,7 +42,8 @@
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         display: flex;
         justify-content: center;
-        gap: 2rem;
+        flex-wrap: wrap;
+        gap: 0.75rem 2rem;
         padding: 0.75rem 1rem;
       }
 
@@ -360,6 +361,41 @@
         }
       }
 
+      @media (max-width: 480px) {
+        .view {
+          padding: 1.25rem;
+        }
+        .card {
+          padding: 2rem 1.25rem;
+        }
+        .countdown {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 0.75rem;
+        }
+        .value {
+          font-size: 1.75rem;
+        }
+        .clock-card {
+          padding: 1.25rem;
+        }
+        .clock-card .time {
+          font-size: 1.8rem;
+        }
+        nav {
+          gap: 0.5rem 1rem;
+          padding: 0.6rem 0.75rem;
+        }
+        nav button {
+          font-size: 0.72rem;
+          padding: 0.2rem 0.3rem;
+        }
+        #tz-select {
+          flex-basis: 100%;
+          margin-left: 0;
+          text-align: center;
+        }
+      }
+
       /* Site nav */
       .site-nav {
         position: fixed;
@@ -406,15 +442,58 @@
         font-weight: 700;
       }
 
+      /* Tap handle so touch devices (no hover) can open the nav */
+      .nav-handle {
+        position: fixed;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1001;
+        width: 72px;
+        height: 26px;
+        padding-top: 6px;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-top: none;
+        border-radius: 0 0 14px 14px;
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+      .nav-handle::before {
+        content: "";
+        width: 32px;
+        height: 4px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.35);
+      }
+      @media (hover: hover) and (pointer: fine) {
+        .nav-handle {
+          display: none;
+        }
+      }
+
       #pageNav {
         position: sticky;
         top: 0;
+        padding-top: 1rem;
         transition: top 0.25s ease;
       }
     </style>
   </head>
 
   <body>
+    <div
+      class="nav-handle"
+      id="navHandle"
+      role="button"
+      tabindex="0"
+      aria-label="Toggle navigation"
+    ></div>
     <nav class="site-nav" id="siteNav">
       <a href="/index.html">Timetable</a>
       <a href="/alarm.html">Alarm</a>
@@ -852,9 +931,11 @@
 
       const siteNav = document.getElementById("siteNav");
       const pageNav = document.getElementById("pageNav");
+      const navHandle = document.getElementById("navHandle");
 
       const NAV_HEIGHT = 60;
       let hideTimer = null;
+      let navPinned = false;
 
       function showNav() {
         siteNav.style.top = "0";
@@ -867,6 +948,7 @@
       }
 
       function hideNav() {
+        if (navPinned) return;
         hideTimer = setTimeout(() => {
           siteNav.style.top = "-70px";
           siteNav.style.opacity = "0";
@@ -883,7 +965,40 @@
       siteNav.addEventListener("mouseenter", () => clearTimeout(hideTimer));
       siteNav.addEventListener("mouseleave", hideNav);
 
+      // Touch devices: tap the handle to pin the nav open or closed
+      if (navHandle) {
+        navHandle.addEventListener("click", (e) => {
+          e.stopPropagation();
+          navPinned = !navPinned;
+          if (navPinned) {
+            showNav();
+          } else {
+            clearTimeout(hideTimer);
+            siteNav.style.top = "-70px";
+            siteNav.style.opacity = "0";
+            pageNav.style.top = "0";
+          }
+        });
+        navHandle.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            navHandle.click();
+          }
+        });
+      }
+
+      // Tapping elsewhere closes a pinned-open nav
+      document.addEventListener("click", (e) => {
+        if (!navPinned) return;
+        if (siteNav.contains(e.target) || e.target === navHandle) return;
+        navPinned = false;
+        siteNav.style.top = "-70px";
+        siteNav.style.opacity = "0";
+        pageNav.style.top = "0";
+      });
+
       hideNav();
     </script>
   </body>
 </html>
+
