@@ -345,7 +345,7 @@
     <nav class="site-nav" id="siteNav">
       <a href="/index.html">Timetable</a>
       <a href="/alarm.html">Alarm</a>
-      <a href="/clock/clock.html">Clock</a>
+      <a href="/clock.html">Clock</a>
       <a href="/gold-calculator.html">Gold Calc</a>
       <a href="/journal.html">Journal</a>
     </nav>
@@ -475,7 +475,8 @@
         "13:00–15:00",
         "15:00–16:00",
         "16:00–16:30",
-        "16:30–18:00",
+        "16:30–17:45",
+        "17:45–18:00",
         "18:00–20:00",
         "20:00–21:30",
         "21:30–22:00",
@@ -488,8 +489,8 @@
             "Reading",
             "Reading",
             "Reading",
-            "Reading",
-            "Reading",
+            "Reading - The New Trading for a Living",
+            "Reading - The New Trading for a Living",
           ],
           "08:00–09:00": [
             "Exercise",
@@ -513,46 +514,49 @@
             "Lunch / Walk",
           ],
           "13:00–15:00": [
-            "Coding / Tools",
-            "Coding / Tools",
-            "Coding / Tools",
-            "Coding / Tools",
-            "Coding / Tools",
+            "Bug Bounty / Security Practice",
+            "Coding / Product Development",
+            "Bug Bounty / Security Practice",
+            "Coding / Product Development",
+            "Bug Bounty / Security Practice",
           ],
           "15:00–16:00": ["Chores", "Chores", "Chores", "Chores", "Chores"],
           "16:00–16:30": ["Relax", "Relax", "Relax", "Relax", "Relax"],
-          "16:30–18:00": [
+          "16:30–17:45": [
             "Trading",
             "Deep Market Research",
             "Trading",
             "Deep Market Research",
             "Trading",
+          ],
+          "17:45–18:00": [
+            "Trade Journal",
+            "Research Notes",
+            "Trade Journal",
+            "Research Notes",
+            "Trade Journal",
           ],
           "18:00–20:00": [
             "Client Work",
+            "Music Production",
             "Client Work",
-            "Relax / Movie",
-            "Relax / Movie",
-            "Relax / Movie",
+            "Music Production",
+            "Personal Projects / Music",
           ],
-          "20:00–21:30": [
-            "Light Reading / Curiosity",
-            "Light Reading",
-            "Light Reading",
-            "Light Reading",
-            "Light Reading",
-          ],
+          "20:00–21:30": ["Movie", "Movie", "Movie", "Movie", "Movie"],
           "21:30–22:00": [
-            "Wind Down",
-            "Wind Down",
-            "Wind Down",
-            "Wind Down",
-            "Wind Down",
+            "Wind Down + Journal",
+            "Wind Down + Journal",
+            "Wind Down + Journal",
+            "Wind Down + Journal",
+            "Wind Down + Journal",
           ],
         },
       };
 
-      const STORAGE_KEY = "bubezi-weekly-timetable-v1";
+      // Bumped from v1: the time-block keys changed shape (16:30–18:00 split
+      // into two blocks), so old saved schedules are intentionally not reused.
+      const STORAGE_KEY = "bubezi-weekly-timetable-v2";
       const tbody = document.querySelector("#scheduleTable tbody");
       const weekLabelInput = document.getElementById("weekLabel");
 
@@ -568,7 +572,11 @@
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return structuredClone(defaultData);
         try {
-          return JSON.parse(raw);
+          const parsed = JSON.parse(raw);
+          if (!parsed || typeof parsed !== "object" || !parsed.cells) {
+            throw new Error("Invalid saved shape");
+          }
+          return parsed;
         } catch {
           return structuredClone(defaultData);
         }
@@ -664,6 +672,8 @@
       }
 
       const ALARM_SOUND_FILE = "alarm.wav";
+      let activeAudio = null;
+      let alarmFiredForBlockStart = null;
 
       async function ringAlarm() {
         try {
@@ -673,23 +683,31 @@
         } catch (error) {
           console.error("Audio failed:", error);
           alert(
-            `Alarm triggered, but sound could not play.\n\nMake sure "${ALARM_SOUND_FILE}" exists beside alarm.html and click the page once to allow audio.`,
+            `Alarm triggered, but sound could not play.\n\nMake sure "${ALARM_SOUND_FILE}" exists beside this file and click the page once to allow audio.`,
           );
         }
       }
 
-      function formatCountdown(ms) {
+      function formatCountdown(ms, blockStartKey) {
         if (ms <= 0) return "Now";
         const totalSeconds = Math.floor(ms / 1000);
         const hrs = Math.floor(totalSeconds / 3600);
         const mins = Math.floor((totalSeconds % 3600) / 60);
         const secs = totalSeconds % 60;
 
-        if (hrs > 0) return `Starts in ${hrs}h ${mins}m ${secs}s`;
-        if (mins > 0) return `Starts in ${mins}m ${secs}s`;
-        if (secs == 1) {
+        // Fire the alarm exactly once per upcoming block, right as it's about
+        // to start, instead of re-triggering on every render tick that
+        // happens to land on secs === 1.
+        if (
+          totalSeconds <= 1 &&
+          alarmFiredForBlockStart !== blockStartKey
+        ) {
+          alarmFiredForBlockStart = blockStartKey;
           ringAlarm();
         }
+
+        if (hrs > 0) return `Starts in ${hrs}h ${mins}m ${secs}s`;
+        if (mins > 0) return `Starts in ${mins}m ${secs}s`;
         return `Starts in ${secs}s`;
       }
 
@@ -812,7 +830,11 @@
             0,
             0,
           );
-          countdownEl.textContent = formatCountdown(nextStart - now);
+          const blockStartKey = `${dayName}-${status.nextBlock.time}`;
+          countdownEl.textContent = formatCountdown(
+            nextStart - now,
+            blockStartKey,
+          );
         } else {
           nextItemEl.textContent = "Done for today";
           nextRangeEl.textContent = `${dayName} • No more blocks`;

@@ -1,0 +1,889 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clock & Sessions</title>
+    <link rel="icon" href="favicon.ico" />
+    <style>
+      :root {
+        --bg: #0f172a;
+        --card: rgba(255, 255, 255, 0.08);
+        --text: #e5e7eb;
+        --muted: #94a3b8;
+        --accent: #d8ffa4ff;
+        --success: #4ade80;
+      }
+
+      * {
+        box-sizing: border-box;
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(circle at top, #1e293b, var(--bg));
+        color: var(--text);
+      }
+
+      /* NAV */
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        backdrop-filter: blur(12px);
+        background: rgba(15, 23, 42, 0.6);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        padding: 0.75rem 1rem;
+      }
+
+      nav button {
+        background: none;
+        border: none;
+        color: var(--muted);
+        font-size: 0.85rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        cursor: pointer;
+        padding: 0.25rem 0.5rem;
+      }
+
+      nav button.active {
+        color: var(--accent);
+      }
+
+      /* VIEWS */
+      .view {
+        display: none;
+        min-height: calc(100vh - 60px);
+        place-items: center;
+        padding: 2rem;
+      }
+
+      .view.active {
+        display: grid;
+      }
+
+      /* CARD */
+      .card {
+        background: var(--card);
+        backdrop-filter: blur(12px);
+        padding: 3rem 2.5rem;
+        border-radius: 16px;
+        text-align: center;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        max-width: 420px;
+        width: 100%;
+      }
+
+      h1 {
+        font-size: 1.6rem;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+      }
+
+      .subtitle {
+        font-size: 0.9rem;
+        color: var(--muted);
+        margin-bottom: 2rem;
+      }
+
+      .countdown {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+      }
+
+      .time-box {
+        background: rgba(255, 255, 255, 0.06);
+        padding: 1rem 0.5rem;
+        border-radius: 12px;
+      }
+
+      .value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--accent);
+      }
+
+      .label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin-top: 0.25rem;
+      }
+
+      /* WORLD CLOCK WALL */
+      .clock-wall {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.5rem;
+        max-width: 900px;
+        width: 100%;
+      }
+
+      .clock-card {
+        background: var(--card);
+        border-radius: 16px;
+        padding: 2rem;
+        text-align: center;
+        backdrop-filter: blur(10px);
+      }
+
+      .city {
+        font-size: 0.85rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 0.75rem;
+      }
+
+      .time {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: var(--accent);
+      }
+
+      .date {
+        font-size: 0.8rem;
+        margin-top: 0.5rem;
+        color: var(--muted);
+      }
+
+      .timeline {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        height: 36px;
+        border-radius: 999px;
+        overflow: hidden;
+        margin: 2rem 0 1.5rem;
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .session {
+        display: grid;
+        place-items: center;
+        font-size: 0.7rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .asia {
+        background: rgba(56, 189, 248, 0.15);
+      }
+
+      .london {
+        background: rgba(74, 222, 128, 0.15);
+      }
+
+      .ny {
+        background: rgba(244, 114, 182, 0.15);
+      }
+
+      .now-marker {
+        position: absolute;
+        top: -6px;
+        width: 2px;
+        height: 48px;
+        background: var(--accent);
+      }
+
+      .killzones {
+        display: grid;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .kz {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.06);
+        font-size: 0.85rem;
+      }
+
+      .kz.active {
+        box-shadow: 0 0 18px rgba(216, 255, 164, 0.35);
+        color: var(--accent);
+      }
+
+      .next-open {
+        text-align: center;
+      }
+
+      .next-open .label {
+        font-size: 0.7rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .next-open .time {
+        margin-top: 0.25rem;
+        font-size: 1.4rem;
+        color: var(--accent);
+      }
+
+      #tz-select {
+        margin-left: 1rem;
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+        border: none;
+        border-radius: 6px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+
+      #tz-select option {
+        background: var(--bg);
+        color: var(--text);
+      }
+      /* SESSIONS TAB FIX */
+      .timeline-wrap {
+        width: 100%;
+        margin: 2rem 0 1.5rem;
+      }
+
+      .timeline-scale {
+        position: relative;
+        width: 100%;
+        height: 48px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .session-block {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        display: grid;
+        place-items: center;
+        font-size: 0.72rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text);
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .session-block.asia {
+        background: rgba(56, 189, 248, 0.15);
+      }
+
+      .session-block.london {
+        background: rgba(74, 222, 128, 0.15);
+      }
+
+      .session-block.ny {
+        background: rgba(244, 114, 182, 0.15);
+      }
+
+      .timeline-hours {
+        display: grid;
+        grid-template-columns: repeat(9, 1fr);
+        align-items: center;
+        gap: 0;
+        margin-top: 0.7rem;
+        padding: 0 2px;
+        font-size: 0.72rem;
+        color: var(--muted);
+      }
+
+      .timeline-hours span {
+        position: relative;
+        text-align: center;
+      }
+
+      .timeline-hours span:first-child {
+        text-align: left;
+      }
+
+      .timeline-hours span:last-child {
+        text-align: right;
+      }
+
+      .now-marker {
+        position: absolute;
+        top: -6px;
+        bottom: -6px;
+        width: 2px;
+        background: var(--accent);
+        box-shadow: 0 0 12px rgba(216, 255, 164, 0.6);
+        z-index: 5;
+      }
+
+      .now-marker::before,
+      .now-marker::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: var(--accent);
+        box-shadow: 0 0 12px rgba(216, 255, 164, 0.45);
+      }
+
+      .now-marker::before {
+        top: -2px;
+      }
+
+      .now-marker::after {
+        bottom: -2px;
+      }
+
+      @media (max-width: 640px) {
+        .session-block {
+          font-size: 0.62rem;
+          letter-spacing: 0.08em;
+        }
+
+        .timeline-hours {
+          font-size: 0.64rem;
+        }
+      }
+
+      /* Site nav */
+      .site-nav {
+        position: fixed;
+        top: -70px; /* hidden above the viewport */
+        left: 0;
+        width: 100%;
+        z-index: 1000;
+
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        flex-wrap: wrap;
+        padding: 12px 16px;
+
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+        transition:
+          top 0.25s ease,
+          opacity 0.25s ease;
+
+        opacity: 0;
+      }
+      .site-nav a {
+        color: #9aa4c7;
+        text-decoration: none;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        padding: 8px 12px;
+        border-radius: 999px;
+        transition: 0.2s ease;
+      }
+      .site-nav a:hover {
+        color: #eef2ff;
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .site-nav a.active {
+        color: #0b1020;
+        background: linear-gradient(135deg, #7c9cff, #9a7cff);
+        font-weight: 700;
+      }
+
+      #pageNav {
+        position: sticky;
+        top: 0;
+        transition: top 0.25s ease;
+      }
+    </style>
+  </head>
+
+  <body>
+    <nav class="site-nav" id="siteNav">
+      <a href="/index.html">Timetable</a>
+      <a href="/alarm.html">Alarm</a>
+      <a href="/clock.html">Clock</a>
+      <a href="/gold-calculator.html">Gold Calc</a>
+      <a href="/journal.html">Journal</a>
+    </nav>
+    <nav id="pageNav">
+      <button class="active" data-view="countdown">Countdown</button>
+      <button data-view="world">World Clock</button>
+      <button data-view="sessions">Sessions</button>
+      <select id="tz-select"></select>
+    </nav>
+
+    <section id="view-countdown" class="view active">
+      <div class="card">
+        <h1 id="title">Countdown</h1>
+        <div class="subtitle" id="subtitle">Feb 5, 2031 · 1:24 PM</div>
+
+        <div id="countdown" class="countdown">
+          <div class="time-box">
+            <div id="days" class="value">0</div>
+            <div class="label">Days</div>
+          </div>
+          <div class="time-box">
+            <div id="hours" class="value">00</div>
+            <div class="label">Hours</div>
+          </div>
+          <div class="time-box">
+            <div id="minutes" class="value">00</div>
+            <div class="label">Minutes</div>
+          </div>
+          <div class="time-box">
+            <div id="seconds" class="value">00</div>
+            <div class="label">Seconds</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-world" class="view">
+      <div class="clock-wall">
+        <div class="clock-card">
+          <div class="city">New York</div>
+          <div class="time" id="ny-time"></div>
+          <div class="date" id="ny-date"></div>
+        </div>
+
+        <div class="clock-card">
+          <div class="city">London</div>
+          <div class="time" id="ldn-time"></div>
+          <div class="date" id="ldn-date"></div>
+        </div>
+
+        <div class="clock-card">
+          <div class="city">EAT · Local</div>
+          <div class="time" id="eat-time"></div>
+          <div class="date" id="eat-date"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-sessions" class="view">
+      <div class="card" style="max-width: 720px">
+        <h1>Market Sessions</h1>
+        <div class="subtitle">Liquidity & timing context</div>
+
+        <div class="timeline-wrap">
+          <div class="timeline-scale" id="timeline-scale">
+            <div class="session-block asia" id="session-asia">Asia</div>
+            <div class="session-block london" id="session-london">London</div>
+            <div class="session-block ny" id="session-ny">New York</div>
+            <div class="now-marker" id="now-marker"></div>
+          </div>
+
+          <div class="timeline-hours">
+            <span>00</span>
+            <span>03</span>
+            <span>06</span>
+            <span>09</span>
+            <span>12</span>
+            <span>15</span>
+            <span>18</span>
+            <span>21</span>
+            <span>24</span>
+          </div>
+        </div>
+
+        <div class="killzones">
+          <div id="kz-london" class="kz">
+            London Kill Zone
+            <span class="kz-status"></span>
+          </div>
+          <div id="kz-ny" class="kz">
+            NY Kill Zone
+            <span class="kz-status"></span>
+          </div>
+        </div>
+
+        <div class="next-open">
+          <div class="label">Next major open</div>
+          <div class="value" id="next-open-name"></div>
+          <div class="time" id="next-open-countdown"></div>
+        </div>
+      </div>
+    </section>
+
+    <script>
+      const TIMEZONES = [
+        "Africa/Abidjan",
+        "Africa/Accra",
+        "Africa/Addis_Ababa",
+        "Africa/Algiers",
+        "Africa/Cairo",
+        "Africa/Casablanca",
+        "Africa/Johannesburg",
+        "Africa/Lagos",
+        "Africa/Nairobi",
+        "Africa/Tripoli",
+        "America/Anchorage",
+        "America/Argentina/Buenos_Aires",
+        "America/Bogota",
+        "America/Caracas",
+        "America/Chicago",
+        "America/Denver",
+        "America/Los_Angeles",
+        "America/Mexico_City",
+        "America/New_York",
+        "America/Sao_Paulo",
+        "America/Toronto",
+        "Asia/Bangkok",
+        "Asia/Calcutta",
+        "Asia/Colombo",
+        "Asia/Dhaka",
+        "Asia/Dubai",
+        "Asia/Hong_Kong",
+        "Asia/Jakarta",
+        "Asia/Jerusalem",
+        "Asia/Kolkata",
+        "Asia/Kuala_Lumpur",
+        "Asia/Manila",
+        "Asia/Seoul",
+        "Asia/Shanghai",
+        "Asia/Singapore",
+        "Asia/Tehran",
+        "Asia/Tokyo",
+        "Australia/Adelaide",
+        "Australia/Brisbane",
+        "Australia/Darwin",
+        "Australia/Melbourne",
+        "Australia/Perth",
+        "Australia/Sydney",
+        "Europe/Amsterdam",
+        "Europe/Athens",
+        "Europe/Belgrade",
+        "Europe/Berlin",
+        "Europe/Brussels",
+        "Europe/Bucharest",
+        "Europe/Copenhagen",
+        "Europe/Dublin",
+        "Europe/Helsinki",
+        "Europe/Lisbon",
+        "Europe/London",
+        "Europe/Madrid",
+        "Europe/Moscow",
+        "Europe/Paris",
+        "Europe/Rome",
+        "Europe/Stockholm",
+        "Europe/Vienna",
+        "Europe/Warsaw",
+        "Indian/Maldives",
+        "Indian/Mauritius",
+        "Indian/Reunion",
+        "Pacific/Auckland",
+        "Pacific/Chatham",
+        "Pacific/Fiji",
+        "Pacific/Guam",
+        "Pacific/Honolulu",
+        "Pacific/Port_Moresby",
+        "Pacific/Samoa",
+        "Pacific/Tahiti",
+        "Pacific/Truk",
+      ];
+
+      let USER_TIMEZONE = "";
+
+      const tzSelect = document.getElementById("tz-select");
+      const defaultOption = document.createElement("option");
+      defaultOption.value = "";
+      defaultOption.textContent = "EAT / Default";
+      tzSelect.appendChild(defaultOption);
+
+      TIMEZONES.forEach((tz) => {
+        const opt = document.createElement("option");
+        opt.value = tz;
+        opt.textContent = tz.replace("_", " · ");
+        tzSelect.appendChild(opt);
+      });
+
+      const views = {
+        countdown: document.getElementById("view-countdown"),
+        world: document.getElementById("view-world"),
+        sessions: document.getElementById("view-sessions"),
+      };
+
+      const buttons = document.querySelectorAll("nav button");
+      buttons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          buttons.forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          Object.values(views).forEach((v) => v.classList.remove("active"));
+          views[btn.dataset.view].classList.add("active");
+        });
+      });
+
+      tzSelect.addEventListener("change", (e) => {
+        USER_TIMEZONE = e.target.value || "";
+        updateClocks();
+        updateSessions();
+      });
+
+      const targetDate = new Date("February 5, 2031 13:24:00").getTime();
+
+      function updateCountdown() {
+        const diff = targetDate - Date.now();
+        if (diff <= 0) {
+          document.getElementById("days").textContent = "0";
+          document.getElementById("hours").textContent = "00";
+          document.getElementById("minutes").textContent = "00";
+          document.getElementById("seconds").textContent = "00";
+          return;
+        }
+
+        document.getElementById("days").textContent = Math.floor(
+          diff / 86400000,
+        );
+        document.getElementById("hours").textContent = String(
+          Math.floor(diff / 3600000) % 24,
+        ).padStart(2, "0");
+        document.getElementById("minutes").textContent = String(
+          Math.floor(diff / 60000) % 60,
+        ).padStart(2, "0");
+        document.getElementById("seconds").textContent = String(
+          Math.floor(diff / 1000) % 60,
+        ).padStart(2, "0");
+      }
+
+      const clocks = {
+        ny: {
+          tz: "America/New_York",
+          time: "ny-time",
+          date: "ny-date",
+        },
+        ldn: {
+          tz: "Europe/London",
+          time: "ldn-time",
+          date: "ldn-date",
+        },
+        eat: {
+          tz: "Africa/Nairobi",
+          time: "eat-time",
+          date: "eat-date",
+        },
+      };
+
+      function updateClocks() {
+        const now = new Date();
+
+        Object.values(clocks).forEach((c) => {
+          const tz =
+            c.tz === "Africa/Nairobi" && USER_TIMEZONE ? USER_TIMEZONE : c.tz;
+
+          document.getElementById(c.time).textContent = new Intl.DateTimeFormat(
+            "en-GB",
+            {
+              timeZone: tz,
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+              hourCycle: "h23",
+            },
+          ).format(now);
+
+          document.getElementById(c.date).textContent = new Intl.DateTimeFormat(
+            "en-GB",
+            {
+              timeZone: tz,
+              weekday: "short",
+              day: "numeric",
+              month: "short",
+            },
+          ).format(now);
+        });
+      }
+
+      const sessions = [
+        { name: "Asia", start: 0, end: 8 },
+        { name: "London", start: 8, end: 16 },
+        { name: "New York", start: 13, end: 21 },
+      ];
+
+      function setSessionBlock(id, startHour, endHour) {
+        const el = document.getElementById(id);
+        if (!el) return;
+
+        const startPct = (startHour / 24) * 100;
+        const widthPct = ((endHour - startHour) / 24) * 100;
+
+        el.style.left = `${startPct}%`;
+        el.style.width = `${widthPct}%`;
+      }
+
+      setSessionBlock("session-asia", 0, 8);
+      setSessionBlock("session-london", 8, 16);
+      setSessionBlock("session-ny", 13, 21);
+
+      function getTimePartsForZone(date, timeZone) {
+        const fmt = new Intl.DateTimeFormat("en-US", {
+          timeZone,
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hourCycle: "h23",
+        });
+
+        const parts = fmt.formatToParts(date);
+        let hour = 0;
+        let minute = 0;
+        let second = 0;
+
+        for (const p of parts) {
+          if (p.type === "hour") hour = parseInt(p.value, 10);
+          if (p.type === "minute") minute = parseInt(p.value, 10);
+          if (p.type === "second") second = parseInt(p.value, 10);
+        }
+
+        return { hour, minute, second };
+      }
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const testParam = urlParams.get("test");
+      const testDate = testParam ? new Date(testParam) : null;
+
+      function updateSessions() {
+        const now = testDate || new Date();
+
+        const utcHourFloat =
+          now.getUTCHours() +
+          now.getUTCMinutes() / 60 +
+          now.getUTCSeconds() / 3600;
+
+        const marker = document.getElementById("now-marker");
+        if (marker) {
+          marker.style.left = `${(utcHourFloat / 24) * 100}%`;
+        }
+
+        const nyParts = getTimePartsForZone(now, "America/New_York");
+        const ldnParts = getTimePartsForZone(now, "Europe/London");
+
+        const nyMinutes = nyParts.hour * 60 + nyParts.minute;
+        const ldnMinutes = ldnParts.hour * 60 + ldnParts.minute;
+
+        const nyKZ = nyMinutes >= 9 * 60 + 30 && nyMinutes < 9 * 60 + 45;
+        const ldnKZ = ldnMinutes >= 7 * 60 && ldnMinutes < 9 * 60;
+
+        const kzLondon = document.getElementById("kz-london");
+        const kzNY = document.getElementById("kz-ny");
+
+        kzLondon.classList.toggle("active", ldnKZ);
+        kzNY.classList.toggle("active", nyKZ);
+
+        const kzLondonStatus = document.querySelector("#kz-london .kz-status");
+        const kzNYStatus = document.querySelector("#kz-ny .kz-status");
+
+        if (kzLondonStatus) {
+          kzLondonStatus.textContent = ldnKZ
+            ? " · active now"
+            : " · 07:00–09:00 London";
+        }
+
+        if (kzNYStatus) {
+          kzNYStatus.textContent = nyKZ
+            ? " · active now"
+            : " · 09:30–09:45 New York";
+        }
+
+        let next = null;
+        for (const open of sessions) {
+          if (utcHourFloat < open.start) {
+            next = open;
+            break;
+          }
+        }
+
+        if (!next) {
+          next = { name: "Asia", start: 24 };
+        }
+
+        const diffHours = next.start - utcHourFloat;
+        const totalSeconds = Math.max(0, Math.floor(diffHours * 3600));
+
+        const h = Math.floor(totalSeconds / 3600);
+        const m = Math.floor((totalSeconds % 3600) / 60);
+        const s = totalSeconds % 60;
+
+        const pad = (n) => String(n).padStart(2, "0");
+
+        document.getElementById("next-open-name").textContent = next.name;
+        document.getElementById("next-open-countdown").textContent =
+          `${pad(h)}:${pad(m)}:${pad(s)}`;
+      }
+
+      updateCountdown();
+      updateClocks();
+      updateSessions();
+
+      setInterval(updateCountdown, 1000);
+      setInterval(updateClocks, 1000);
+      setInterval(updateSessions, 1000);
+    </script>
+    <script>
+      (function () {
+        const path = window.location.pathname.replace(/\/+$/, "") || "/";
+        document.querySelectorAll("#siteNav a").forEach((a) => {
+          const href = a.getAttribute("href").replace(/\/+$/, "");
+          if (
+            path === href ||
+            (href === "" && path === "/index.html") ||
+            path.endsWith(href)
+          ) {
+            a.classList.add("active");
+          }
+        });
+      })();
+
+      const siteNav = document.getElementById("siteNav");
+      const pageNav = document.getElementById("pageNav");
+
+      const NAV_HEIGHT = 60;
+      let hideTimer = null;
+
+      function showNav() {
+        siteNav.style.top = "0";
+        siteNav.style.opacity = "1";
+
+        // Push only the second nav down
+        pageNav.style.top = NAV_HEIGHT + "px";
+
+        clearTimeout(hideTimer);
+      }
+
+      function hideNav() {
+        hideTimer = setTimeout(() => {
+          siteNav.style.top = "-70px";
+          siteNav.style.opacity = "0";
+
+          // Return the second nav to the top
+          pageNav.style.top = "0";
+        }, 300);
+      }
+
+      document.addEventListener("mousemove", (e) => {
+        if (e.clientY < 20) showNav();
+      });
+
+      siteNav.addEventListener("mouseenter", () => clearTimeout(hideTimer));
+      siteNav.addEventListener("mouseleave", hideNav);
+
+      hideNav();
+    </script>
+  </body>
+</html>
